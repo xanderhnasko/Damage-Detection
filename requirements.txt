@@ -1,0 +1,11 @@
+torch
+torchvision
+opencv-python
+albumentations
+pillow
+numpy
+tqdm
+rich
+tensorboard
+wandb
+pyyaml
