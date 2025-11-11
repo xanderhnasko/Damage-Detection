@@ -1,0 +1,8 @@
+bucket: gs://229_project_bucket/data/train/train
+images_prefix: images
+labels_prefix: labels
+
+
+train_events: ["hurricane-florence", "hurricane-harvey"]
+val_events:   ["hurricane-matthew"]
+test_events:  ["hurricane-michael"]
