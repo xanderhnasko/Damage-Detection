@@ -37,20 +37,6 @@ def guess_pre_name(post_name: str):
     return post_name.replace("_post_disaster", "_pre_disaster")
 
 def build_rows_for_label(label_path: Path, images_root: Path, pad: int):
-    """Extract training rows from a single label JSON file.
-    
-    Reads a label JSON, finds corresponding post-disaster image, extracts all damage
-    annotations (polygons), converts them to bounding boxes, and returns a list of
-    dictionary rows ready for CSV writing.
-    
-    Args:
-        label_path: Path to label JSON file
-        images_root: Root directory containing image files
-        pad: Padding to add around bounding boxes
-    
-    Returns:
-        List of dicts, each containing: img_path, pre_img_path, bbox coords, label info
-    """
     # Load and parse the label JSON file
     j = json.loads(label_path.read_text())
     meta = j.get("metadata", {})
