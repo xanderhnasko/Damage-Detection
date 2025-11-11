@@ -1,7 +1,3 @@
-"""Utilities for parsing WKT (Well-Known Text) polygon formats from xView2 labels.
-
-Converts WKT polygon strings to point lists and extracts bounding boxes.
-"""
 def parse_wkt_polygon(wkt: str):
     # wkt should be: "POLYGON ((x1 y1, x2 y2, ...))"
     wkt = wkt.strip()
