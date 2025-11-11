@@ -1,3 +1,12 @@
-# CS229 Baseline Model
- baseline: ResNet18 damage classifier. Two-stage pipeline (detector -> crops -> classifier) to follow.
-Hala Madrid
+# Baseline Model
+
+In GCC VM:
+
+``` bash
+make setup
+make fetch-data
+make manifest
+make train-post
+```
+
+Data gets synced from GCS to `~/project/data/train/train/`. The manifest CSV is created from the label JSON files, extracting bounding boxes for each damage annotation. Training outputs go to timestamped directories under `~/project/outputs/`.
