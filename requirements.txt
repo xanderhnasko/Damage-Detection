@@ -1,11 +1,13 @@
-torch
+# Core
 torchvision
-opencv-python
-albumentations
 pillow
 numpy
 tqdm
+pyyaml
+
+# Optional dependencies for future
+opencv-python
+albumentations
 rich
 tensorboard
 wandb
-pyyaml
