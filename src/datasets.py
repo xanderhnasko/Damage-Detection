@@ -22,7 +22,7 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         """
     
         manifest_csv: Path to CSV manifest
-        split: "train" or "val"
+        split: "train" or "test" (ignored when allowed_events is provided)
         split_frac: Fraction for train split 
         img_size: Target image size for resizing
         allowed_events: (optional) list of event names to filter by (e.g., ["hurricane-florence", "hurricane-harvey"])... If None, uses all events
@@ -43,10 +43,12 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
             rows = [r for r in rows if extract_event_name(r["img_path"]) in allowed_events]
             if not rows:
                 raise ValueError(f"No rows found matching events: {allowed_events}")
-
-        # create train and eval datasets (90-10 default)
-        split_idx = int(len(rows)*split_frac)
-        self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
+            # When using event-based filtering, use all rows (no further splitting)
+            self.rows = rows
+        else:
+            # Only apply 90-10 split when not using event-based filtering
+            split_idx = int(len(rows)*split_frac)
+            self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
         self.img_size = img_size
         # Cache for storing recently loaded images 
         self.cache = {}
