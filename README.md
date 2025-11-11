@@ -1,6 +1,6 @@
 # Baseline Model
 
-Quick start
+In GCC VM:
 
 ``` bash
 make setup
