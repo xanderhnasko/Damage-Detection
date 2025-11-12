@@ -70,8 +70,8 @@ def main(args):
 
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
-    torch.backends.cudnn.becnhmark = True 
-    workers =  min(8, max(2, os.cpu_count() // 2)) 
+    torch.backends.cudnn.benchmark = True 
+    workers =  4
     train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
     test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
 
