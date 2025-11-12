@@ -59,8 +59,10 @@ def main(args):
 
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
-    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  num_workers=6, pin_memory=True)
-    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, num_workers=6, pin_memory=True)
+    torch.backends.cudnn.becnhmark = True 
+    workers =  min(8, max(2, os.cpu_count() // 2)) 
+    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
+    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
 
     ### STEP 3: INIT MODEL ###
  
@@ -75,8 +77,8 @@ def main(args):
     # Original ImageNet1k has 1000 classes, we only need 4
     # replace fully connected final layer to map 512 features -> 4 classes
     model.fc = nn.Linear(model.fc.in_features, 4)
-    model = model.to(device)  
-    
+    model = model.to(device, memory_format=torch.channels_last)  
+
     # using AdamW optimizer instead of SGD 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
     cost = nn.CrossEntropyLoss().to(device)
@@ -102,13 +104,14 @@ def main(args):
         model.train()  
         tr_loss = 0.0
         for xb, yb in train_dl:
-            xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
+            xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
 
-            opt.zero_grad()  # Clear gradients from previous iter
+            opt.zero_grad(set_to_none=True)  # Clear gradients from previous iter
             
             # Mixed precision forward pass
             with autocast(device_type=device.type):
-                loss = cost(model(xb), yb)  # Forward pass + compute loss
+                logits = model(xb)
+                loss = cost(logits, yb)  # Forward pass + compute loss
             
             # Mixed precision backward pass
             scaler.scale(loss).backward()
@@ -165,7 +168,7 @@ if __name__ == "__main__":
     ap.add_argument("--out_dir", required=True)
     ap.add_argument("--config", type=str, default=None, help="Path to YAML config file for event filtering (e.g., configs/hurricanes.yaml)")
     ap.add_argument("--epochs", type=int, default=10)
-    ap.add_argument("--bs", type=int, default=256)
+    ap.add_argument("--bs", type=int, default=512)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--img_size", type=int, default=224)
     args = ap.parse_args()

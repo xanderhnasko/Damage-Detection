@@ -6,6 +6,7 @@ from PIL import Image
 import torch
 import torchvision as tv
 from pathlib import Path
+from collections import OrderedDict
 
 # Get mean and std from ResNet18 ImageNet-1K weights metadata
 # used to match the preprocessing used during ImageNet training
@@ -16,14 +17,6 @@ IMAGENET_STD  = (0.229, 0.224, 0.225)
 class ThreeChannelDataset(torch.utils.data.Dataset):
 
     def __init__(self, manifest_csv, split="train", split_frac=0.9, img_size=224, allowed_events=None):
-        """
-    
-        manifest_csv: Path to CSV manifest
-        split: "train" or "test" - determines which transforms to apply
-        split_frac: Fraction for train split 
-        img_size: Target image size for resizing
-        allowed_events: (optional) list of event names to filter by (e.g., ["hurricane-florence", "hurricane-harvey"])... If None, uses all events
-        """
         rows = []
         # Read all rows from the manifest CSV 
         with open(manifest_csv) as f:
@@ -50,13 +43,14 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         self.split = split
         self.img_size = img_size
         # Cache for storing recently loaded images 
-        self.cache = {}
+        self.cache = OrderedDict()
+        self.cache_max = 128
 
         # training transforms
         self.tf_train = tv.transforms.Compose([
             tv.transforms.Resize((img_size, img_size)),  # Resize to target size
             tv.transforms.RandomHorizontalFlip(), # random augmentation
-            tv.transforms.ToTensor(),  # convert to PyTorch tensor (0-1 range)
+            tv.transforms.ToTensor(),  # convert to PyTorch tensor 
             tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),  # normalize to ImageNet pretrained stats
         ])
         # eval transform (no augmentation)
@@ -69,18 +63,20 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.rows)
 
-    def _load_image(self, p):
-        # Return cached image if available
-        if p in self.cache: return self.cache[p]
-        # Load image and convert to RGB 
-        im = Image.open(p).convert("RGB")
-        if len(self.cache) > 64: self.cache.clear()
-        self.cache[p] = im
+    def _get_cached_image(self, path: str):
+        if path in self.cache:
+            im = self.cache.pop(path)   
+            self.cache[path] = im
+            return im
+        im = Image.open(path).convert("RGB")
+        if len(self.cache) >= self.cache_max:
+            self.cache.popitem(last=False) 
+        self.cache[path] = im
         return im
 
     def __getitem__(self, i):
         r = self.rows[i]
-        im = self._load_image(r["img_path"])
+        im = self._get_cached_image(r["img_path"])
         xmin,ymin,xmax,ymax = map(int, [r["xmin"],r["ymin"],r["xmax"],r["ymax"]])
         crop = im.crop((xmin,ymin,xmax,ymax))
         

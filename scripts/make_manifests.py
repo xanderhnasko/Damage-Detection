@@ -93,10 +93,20 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int):
         if not bb:
             continue  # Skip invalid bboxes
         
+        # Rewrite paths if local_root specified
+        final_post_path = str(post_img_path)
+        final_pre_path = str(pre_img_path) if pre_exists else ""
+        
+        if args.local_root:
+            # Replace GCSFuse path with local path
+            final_post_path = str(post_img_path).replace(str(images_root), args.local_root)
+            if pre_exists:
+                final_pre_path = str(pre_img_path).replace(str(images_root), args.local_root)
+        
         # Create row for CSV manifest
         rows.append({
-            "img_path": str(post_img_path),  
-            "pre_img_path": str(pre_img_path) if pre_exists else "",  
+            "img_path": final_post_path,  
+            "pre_img_path": final_pre_path,  
             "xmin": bb[0], "ymin": bb[1], "xmax": bb[2], "ymax": bb[3],  # Bbox coords
             "label_id": DAMAGE_MAP[subtype],  
             "label_name": subtype,  
@@ -110,6 +120,7 @@ def main():
     ap.add_argument("--labels_root", required=True, help="Root directory containing label JSON files")
     ap.add_argument("--out_csv", required=True, help="Output CSV manifest path")
     ap.add_argument("--pad", type=int, default=16, help="Padding pixels to add around bboxes")
+    ap.add_argument("--local_root", type=str, default=None, help="Local root path to replace GCSFuse paths (e.g., /mnt/local_images)")
     args = ap.parse_args()
 
   
