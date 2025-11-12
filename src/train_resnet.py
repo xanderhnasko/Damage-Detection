@@ -128,7 +128,7 @@ def main(args):
         test_loss = 0.0
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
-                xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
+                xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
                 
                 # Mixed precision inference
                 with autocast(device_type=device.type):
@@ -144,8 +144,8 @@ def main(args):
         acc = correct / total if total else 0.0
         
         # average losses for each epoch
-        avg_train_loss = tr_loss / len(train_dl)
-        avg_test_loss = test_loss / len(test_dl)
+        avg_train_loss = tr_loss / len(train_ds)
+        avg_test_loss = test_loss / len(test_ds)
         
         # Log metrics to CSV
         with open(metrics_file, 'a', newline='') as f:
