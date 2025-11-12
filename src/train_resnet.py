@@ -115,7 +115,7 @@ def main(args):
     for epoch in range(args.epochs):
         #TRAINING PHASE
         model.train()  
-        tr_loss = 0.0
+        tr_loss, tr_seen = 0.0, 0
         for xb, yb in train_dl:
             xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
 
@@ -131,12 +131,14 @@ def main(args):
             scaler.step(opt)
             scaler.update()
             
-            tr_loss += loss.item() 
+            bs = yb.size(0)
+            tr_loss += loss.item() * bs
+            tr_seen += bs 
         
         #TESTING PHASE
         model.eval() 
         correct = total = 0
-        test_loss = 0.0
+        test_loss, test_seen = 0.0, 0
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
                 xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
@@ -144,7 +146,11 @@ def main(args):
                 # Mixed precision inference
                 with autocast(device_type=device.type):
                     output = model(xb)
-                    test_loss += cost(output, yb).item()
+                    loss = cost(output, yb)
+                
+                bs = yb.size(0)
+                test_loss += loss.item() * bs
+                test_seen += bs
                 
                 pred = output.argmax(1)  # get predicted class
                 is_correct = (pred == yb)
@@ -155,8 +161,8 @@ def main(args):
         acc = correct / total if total else 0.0
         
         # average losses for each epoch
-        avg_train_loss = tr_loss / len(train_ds)
-        avg_test_loss = test_loss / len(test_ds)
+        avg_train_loss = tr_loss / tr_seen
+        avg_test_loss = test_loss / test_seen
         
         # Log metrics to CSV
         with open(metrics_file, 'a', newline='') as f:
