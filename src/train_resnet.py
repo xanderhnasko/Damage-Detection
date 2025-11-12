@@ -107,7 +107,7 @@ def main(args):
             opt.zero_grad()  # Clear gradients from previous iter
             
             # Mixed precision forward pass
-            with autocast():
+            with autocast(device_type=device.type):
                 loss = cost(model(xb), yb)  # Forward pass + compute loss
             
             # Mixed precision backward pass
@@ -126,7 +126,7 @@ def main(args):
                 xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
                 
                 # Mixed precision inference
-                with autocast():
+                with autocast(device_type=device.type):
                     output = model(xb)
                     test_loss += cost(output, yb).item()
                 
