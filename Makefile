@@ -26,4 +26,4 @@ sync-outputs:
 	bash scripts/output_to_gcs.sh
 
 train-hurricanes:
-	$(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 10 --config configs/hurricanes.yaml
+	$(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 20 --config configs/hurricanes.yaml

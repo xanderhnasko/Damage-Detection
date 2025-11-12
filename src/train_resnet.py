@@ -93,8 +93,8 @@ def main(args):
     model = model.to(device, memory_format=torch.channels_last)  
 
     # using SGD with momentum for fine-tuning 
-    opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    cost = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=0.1).to(device)
+    opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
+    cost = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=0.05).to(device)
     
     # Mixed precision training for speed
     scaler = GradScaler()
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     ap.add_argument("--config", type=str, default=None, help="Path to YAML config file for event filtering (e.g., configs/hurricanes.yaml)")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--bs", type=int, default=512)
-    ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--img_size", type=int, default=224)
     args = ap.parse_args()
     main(args)
