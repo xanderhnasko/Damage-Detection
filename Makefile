@@ -1,4 +1,4 @@
-PY=python
+PY=python3
 
 IMAGES_ROOT=$(HOME)/project/data/train/train/images
 LABELS_ROOT=$(HOME)/project/data/train/train/labels
