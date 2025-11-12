@@ -1,78 +1,50 @@
 #!/usr/bin/env python3
-import argparse
-import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
-from pathlib import Path
+import seaborn as sns
+import sys
 
-def plot_metrics(csv_path, output_dir=None):
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"CSV file not found: {csv_path}")
+def plot_training_metrics(csv_path):
+    """
+    Plot training metrics from a CSV file containing epoch, train_loss, test_loss, test_accuracy.
+    """
+    plt.style.use('seaborn-v0_8-whitegrid')
+    sns.set_palette("husl")
     
     df = pd.read_csv(csv_path)
     
-    required_cols = ["epoch", "train_loss", "test_loss", "test_accuracy"]
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"CSV missing required columns: {missing_cols}")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    epochs = df['epoch'].astype(int)
     
-    epochs = df["epoch"]
+    ax1.plot(epochs, df['train_loss'], linewidth=2, label='Training Loss')
+    ax1.plot(epochs, df['test_loss'], linewidth=2, label='Test Loss')
+    ax1.set_xlabel('Epoch', fontsize=12)
+    ax1.set_ylabel('Loss', fontsize=12)
+    ax1.set_title('Training and Test Loss', fontsize=14, fontweight='bold')
+    ax1.legend(fontsize=11)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(epochs)
     
-    # training loss
-    axes[0].plot(epochs, df["train_loss"], 'b-', label='Train Loss', linewidth=2)
-    axes[0].set_xlabel('Epoch', fontsize=12)
-    axes[0].set_ylabel('Loss', fontsize=12)
-    axes[0].set_title('Training Loss', fontsize=14, fontweight='bold')
-    axes[0].grid(True, alpha=0.3)
-    axes[0].legend()
+    ax2.plot(epochs, df['test_accuracy'], linewidth=2, color='green')
+    ax2.set_xlabel('Epoch', fontsize=12)
+    ax2.set_ylabel('Accuracy', fontsize=12)
+    ax2.set_title('Test Accuracy', fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xticks(epochs)
     
-    # test loss
-    axes[1].plot(epochs, df["test_loss"], 'r-', label='Test Loss', linewidth=2)
-    axes[1].set_xlabel('Epoch', fontsize=12)
-    axes[1].set_ylabel('Loss', fontsize=12)
-    axes[1].set_title('Test Loss', fontsize=14, fontweight='bold')
-    axes[1].grid(True, alpha=0.3)
-    axes[1].legend()
-    
-    # test accuracy
-    axes[2].plot(epochs, df["test_accuracy"], 'g-', label='Test Accuracy', linewidth=2)
-    axes[2].set_xlabel('Epoch', fontsize=12)
-    axes[2].set_ylabel('Accuracy', fontsize=12)
-    axes[2].set_title('Test Accuracy', fontsize=14, fontweight='bold')
-    axes[2].grid(True, alpha=0.3)
-    axes[2].legend()
-    axes[2].set_ylim([0, 1])  
+    min_acc = df['test_accuracy'].min()
+    max_acc = df['test_accuracy'].max()
+    margin = (max_acc - min_acc) * 0.1
+    ax2.set_ylim(min_acc - margin, max_acc + margin)
     
     plt.tight_layout()
-    
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "training_curves.png")
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"Plot saved to: {output_path}")
-    else:
-        plt.show()
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Plot training/testing curves from metrics CSV"
-    )
-    parser.add_argument(
-        "--csv",
-        type=str,
-        default="data/metrics/metrics.csv"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None
-    )
-    args = parser.parse_args()
-    
-    plot_metrics(args.csv, args.output)
+    plt.show()
 
 if __name__ == "__main__":
-    main()
-
+    if len(sys.argv) != 2:
+        print("Usage: python plot_metrics.py <csv_path>")
+        sys.exit(1)
+    
+    plot_training_metrics(sys.argv[1])

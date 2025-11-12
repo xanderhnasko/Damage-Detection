@@ -85,7 +85,7 @@ def main(args):
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
     
-    # init ResNet18 with ImageNet pretrained weights
+    # init ResNet18 or 50 with ImageNet pretrained weights
     model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
     # Original ImageNet1k has 1000 classes, we only need 4
     # replace fully connected final layer to map 512 features -> 4 classes
