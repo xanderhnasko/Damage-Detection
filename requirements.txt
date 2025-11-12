@@ -1,7 +1,7 @@
 # Core
 torchvision
 pillow
-numpy
+numpy<2  # Pin to NumPy 1.x for compatibility with matplotlib and other packages
 tqdm
 pyyaml
 
@@ -11,3 +11,7 @@ albumentations
 rich
 tensorboard
 wandb
+
+# Plotting
+matplotlib
+pandas

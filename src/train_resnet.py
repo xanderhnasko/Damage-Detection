@@ -71,20 +71,28 @@ def main(args):
         return imgs, ys
 
     # Create data loaders with above collations
-    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  num_workers=4, collate_fn=collate_train)
-    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, num_workers=4, collate_fn=collate_eval)
+    # Reduced num_workers and added pin_memory for better GPU performance
+    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  num_workers=2, pin_memory=True, collate_fn=collate_train)
+    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, num_workers=2, pin_memory=True, collate_fn=collate_eval)
 
     ### STEP 3: INIT MODEL ###
+    # Check device availability
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"[DEVICE] Using device: {device}")
+    if device.type == 'cuda':
+        print(f"[DEVICE] GPU: {torch.cuda.get_device_name(0)}")
+        print(f"[DEVICE] Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+    
     # init ResNet18 with ImageNet pretrained weights
     model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
     # Original ImageNet1k has 1000 classes, we only need 4
     # replace fully connected final layer to map 512 features -> 4 classes
     model.fc = nn.Linear(model.fc.in_features, 4)
-    model = model.cuda()  
+    model = model.to(device)  
     
     # using AdamW optimizer instead of SGD 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
-    cost = nn.CrossEntropyLoss()
+    cost = nn.CrossEntropyLoss().to(device)
 
     # Create output dir
     os.makedirs(args.out_dir, exist_ok=True)
@@ -104,7 +112,7 @@ def main(args):
         model.train()  
         tr_loss = 0.0
         for xb, yb in train_dl:
-            xb, yb = xb.cuda(), yb.cuda() # move to GPU
+            xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
 
             opt.zero_grad()  # Clear gradients from previous iter
             loss = cost(model(xb), yb)  # Forward pass + compute loss
@@ -118,7 +126,7 @@ def main(args):
         test_loss = 0.0
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
-                xb, yb = xb.cuda(), yb.cuda() # move to GPU
+                xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
                 output = model(xb)
                 test_loss += cost(output, yb).item()
                 pred = output.argmax(1)  # get predicted class
@@ -156,7 +164,7 @@ if __name__ == "__main__":
     ap.add_argument("--out_dir", required=True)
     ap.add_argument("--config", type=str, default=None, help="Path to YAML config file for event filtering (e.g., configs/hurricanes.yaml)")
     ap.add_argument("--epochs", type=int, default=10)
-    ap.add_argument("--bs", type=int, default=64)
+    ap.add_argument("--bs", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--img_size", type=int, default=224)
     args = ap.parse_args()
