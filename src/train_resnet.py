@@ -55,6 +55,17 @@ def main(args):
         img_size=args.img_size,
         allowed_events=test_events
     )
+    
+    # Calculate class weights for imbalanced dataset
+    class_counts = [0] * 4  # 4 damage classes
+    for _, label in train_ds:
+        class_counts[label] += 1
+    
+    total_samples = sum(class_counts)
+    class_weights = [total_samples / (4 * count) for count in class_counts]
+    class_weights = torch.tensor(class_weights, dtype=torch.float32)
+    print(f"Class counts: {class_counts}")
+    print(f"Class weights: {class_weights}")
 
 
     ### STEP 2: DATA LOADERS ###
@@ -83,7 +94,7 @@ def main(args):
 
     # using AdamW optimizer instead of SGD 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
-    cost = nn.CrossEntropyLoss().to(device)
+    cost = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=0.1).to(device)
     
     # Mixed precision training for speed
     scaler = GradScaler()
