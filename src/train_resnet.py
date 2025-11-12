@@ -64,6 +64,8 @@ def main(args):
     train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
     test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
 
+    print("train_dl.num_workers =", getattr(train_dl, "num_workers", "N/A"))
+    print("test_dl.num_workers  =", getattr(test_dl, "num_workers", "N/A"))
     ### STEP 3: INIT MODEL ###
  
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
