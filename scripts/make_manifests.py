@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Build manifest CSV from xView2 label JSON files.
 
 Reads label JSON files containing WKT polygon annotations, extracts bboxes
