@@ -37,7 +37,7 @@ def guess_pre_name(post_name: str):
     """Convert post-disaster filename to pre-disaster filename."""
     return post_name.replace("_post_disaster", "_pre_disaster")
 
-def build_rows_for_label(label_path: Path, images_root: Path, pad: int):
+def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_root: str = None):
     # Load and parse the label JSON file
     j = json.loads(label_path.read_text())
     meta = j.get("metadata", {})
@@ -97,11 +97,11 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int):
         final_post_path = str(post_img_path)
         final_pre_path = str(pre_img_path) if pre_exists else ""
         
-        if args.local_root:
+        if local_root:
             # Replace GCSFuse path with local path
-            final_post_path = str(post_img_path).replace(str(images_root), args.local_root)
+            final_post_path = str(post_img_path).replace(str(images_root), local_root)
             if pre_exists:
-                final_pre_path = str(pre_img_path).replace(str(images_root), args.local_root)
+                final_pre_path = str(pre_img_path).replace(str(images_root), local_root)
         
         # Create row for CSV manifest
         rows.append({
@@ -145,7 +145,7 @@ def main():
         
         # Process each label file and write rows to CSV
         for lp in tqdm(label_files, desc="Labels"):
-            for row in build_rows_for_label(lp, images_root, args.pad):
+            for row in build_rows_for_label(lp, images_root, args.pad, args.local_root):
                 writer.writerow(row)
                 nrows += 1
     
