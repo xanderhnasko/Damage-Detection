@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Train ResNet18 classifier on xView2 damage detection crops.
 
