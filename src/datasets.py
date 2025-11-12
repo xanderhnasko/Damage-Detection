@@ -48,8 +48,9 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
 
         # training transforms
         self.tf_train = tv.transforms.Compose([
-            tv.transforms.Resize((img_size, img_size)),  # Resize to target size
-            tv.transforms.RandomHorizontalFlip(), # random augmentation
+            tv.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),  # Random crop with slight scale variation
+            tv.transforms.RandomHorizontalFlip(p=0.5), # random horizontal flip with explicit probability
+            tv.transforms.RandomRotation(10), # random rotation up to 10 degrees
             tv.transforms.ToTensor(),  # convert to PyTorch tensor 
             tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),  # normalize to ImageNet pretrained stats
         ])
