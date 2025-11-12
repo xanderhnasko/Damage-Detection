@@ -92,8 +92,8 @@ def main(args):
     model.fc = nn.Linear(model.fc.in_features, 4)
     model = model.to(device, memory_format=torch.channels_last)  
 
-    # using AdamW optimizer instead of SGD 
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    # using SGD with momentum for fine-tuning 
+    opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     cost = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=0.1).to(device)
     
     # Mixed precision training for speed
