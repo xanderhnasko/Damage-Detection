@@ -11,6 +11,7 @@ import argparse, os, random, csv
 import torch, torchvision as tv
 from torch import nn
 from torch.utils.data import DataLoader
+from torch.amp import autocast, GradScaler
 from datasets import ThreeChannelDataset
 import yaml
 
@@ -37,8 +38,8 @@ def main(args):
         events = load_config(args.config)
         train_events = events['train_events']
         test_events = events['test_events']  # Use test_events for validation during training
-        print(f"[CONFIG] Training on events: {train_events}")
-        print(f"[CONFIG] Testing/validating on events: {test_events}")
+        print(f"Training on events: {train_events}")
+        print(f"Testing/validating on events: {test_events}")
 
     # Create train/test datasets from manifest CSV
     # When config is provided, uses event-based filtering (no 90/10 split)
@@ -56,33 +57,18 @@ def main(args):
     )
 
 
-    ### STEP 2: MAKE BATCHES USING COLLATE FUNCTION ###
-    # images of dif sizes (different croppings) can't be stacked into single tensor, need to collate
-
-    def collate_train(batch):
-        imgs, ys = zip(*batch)  # Unpack (image, label) pairs
-        # for training: resize, random flip, normalize (see src/datasets.py)
-        imgs = torch.stack([train_ds.tf_train(im) for im in imgs])
-        ys   = torch.tensor(ys).long() 
-        return imgs, ys
-    def collate_eval(batch):
-        imgs, ys = zip(*batch)
-        imgs = torch.stack([test_ds.tf_eval(im) for im in imgs])
-        ys   = torch.tensor(ys).long()
-        return imgs, ys
-
-    # Create data loaders with above collations
-    # Reduced num_workers and added pin_memory for better GPU performance
-    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  num_workers=2, pin_memory=True, collate_fn=collate_train)
-    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, num_workers=2, pin_memory=True, collate_fn=collate_eval)
+    ### STEP 2: DATA LOADERS ###
+    # Transforms applied in dataset.py
+    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  num_workers=6, pin_memory=True)
+    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, num_workers=6, pin_memory=True)
 
     ### STEP 3: INIT MODEL ###
-    # Check device availability
+ 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"[DEVICE] Using device: {device}")
+    print(f"Using device: {device}")
     if device.type == 'cuda':
-        print(f"[DEVICE] GPU: {torch.cuda.get_device_name(0)}")
-        print(f"[DEVICE] Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
     
     # init ResNet18 with ImageNet pretrained weights
     model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
@@ -94,6 +80,9 @@ def main(args):
     # using AdamW optimizer instead of SGD 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
     cost = nn.CrossEntropyLoss().to(device)
+    
+    # Mixed precision training for speed
+    scaler = GradScaler()
 
     # Create output dir
     os.makedirs(args.out_dir, exist_ok=True)
@@ -116,9 +105,16 @@ def main(args):
             xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
 
             opt.zero_grad()  # Clear gradients from previous iter
-            loss = cost(model(xb), yb)  # Forward pass + compute loss
-            loss.backward()  # Backward pass 
-            opt.step()  # Update weights
+            
+            # Mixed precision forward pass
+            with autocast():
+                loss = cost(model(xb), yb)  # Forward pass + compute loss
+            
+            # Mixed precision backward pass
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+            
             tr_loss += loss.item() 
         
         #TESTING PHASE
@@ -128,8 +124,12 @@ def main(args):
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
                 xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
-                output = model(xb)
-                test_loss += cost(output, yb).item()
+                
+                # Mixed precision inference
+                with autocast():
+                    output = model(xb)
+                    test_loss += cost(output, yb).item()
+                
                 pred = output.argmax(1)  # get predicted class
                 is_correct = (pred == yb)
                 correct += is_correct.sum().item()  # num correct predictions
@@ -155,9 +155,9 @@ def main(args):
             best = acc
             torch.save(model.state_dict(), os.path.join(args.out_dir, "best.pt"))
         
-        print(f"epoch: {epoch+1}/{args.epochs} loss={avg_train_loss:.4f} test_loss={avg_test_loss:.4f} test_acc={acc:.3f}")
+        print(f"epoch: {epoch+1}/{args.epochs} train loss = {avg_train_loss:.4f} test loss = {avg_test_loss:.4f} test acc. = {acc:.3f}")
 
-    print(f"[DONE] best_test_acc={best:.3f}")
+    print(f"best test acc. = {best:.3f}")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

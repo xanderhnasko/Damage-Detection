@@ -19,7 +19,7 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         """
     
         manifest_csv: Path to CSV manifest
-        split: "train" or "test" (ignored when allowed_events is provided)
+        split: "train" or "test" - determines which transforms to apply
         split_frac: Fraction for train split 
         img_size: Target image size for resizing
         allowed_events: (optional) list of event names to filter by (e.g., ["hurricane-florence", "hurricane-harvey"])... If None, uses all events
@@ -46,6 +46,8 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
             # Only apply 90-10 split when not using event-based filtering
             split_idx = int(len(rows)*split_frac)
             self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
+        
+        self.split = split
         self.img_size = img_size
         # Cache for storing recently loaded images 
         self.cache = {}
@@ -81,6 +83,13 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         im = self._load_image(r["img_path"])
         xmin,ymin,xmax,ymax = map(int, [r["xmin"],r["ymin"],r["xmax"],r["ymax"]])
         crop = im.crop((xmin,ymin,xmax,ymax))
+        
+        # Apply transforms based on split
+        if self.split == "train":
+            crop = self.tf_train(crop)
+        else:
+            crop = self.tf_eval(crop)
+        
         y = int(r["label_id"])
         return crop, y
 
