@@ -10,8 +10,8 @@ from pathlib import Path
 # Get mean and std from ResNet18 ImageNet-1K weights metadata
 # used to match the preprocessing used during ImageNet training
 weights = tv.models.ResNet18_Weights.IMAGENET1K_V1
-IMAGENET_MEAN = weights.meta["mean"]
-IMAGENET_STD = weights.meta["std"]
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD  = (0.229, 0.224, 0.225)
 
 class ThreeChannelDataset(torch.utils.data.Dataset):
 
