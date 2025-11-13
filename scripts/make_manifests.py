@@ -16,7 +16,7 @@ DAMAGE_MAP = {
 }
 
 def clip_bbox(b, w, h, pad=16):
-    """Clip bounding box to image dimensions and add padding."""
+    """Clip bounding box to image dims + padding"""
 
     xmin, ymin, xmax, ymax = b
     # Expand bbox by padding, but not past image boundaries
@@ -31,7 +31,6 @@ def clip_bbox(b, w, h, pad=16):
     return [xmin, ymin, xmax, ymax]
 
 def guess_pre_name(post_name: str):
-    """Convert post-disaster filename to pre-disaster filename."""
     return post_name.replace("_post_disaster", "_pre_disaster")
 
 def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_root: str = None):
