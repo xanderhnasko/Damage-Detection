@@ -1,17 +1,7 @@
-# Core
 torchvision
 pillow
-numpy<2  # Pin to NumPy 1.x for compatibility with matplotlib and other packages
+numpy<2  
 tqdm
 pyyaml
-
-# Optional dependencies for future
-opencv-python
-albumentations
-rich
-tensorboard
-wandb
-
-# Plotting
 matplotlib
 pandas

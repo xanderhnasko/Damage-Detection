@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-Train ResNet18 classifier on xView2 damage detection crops.
-
-Reads a manifest CSV with image paths and bounding boxes, trains a ResNet18 model
+Train ResNet18/50 classifier on crops.
+Reads  manifest CSV with image paths and bboxes, trains a ResNet model
 to classify building damage into 4 categories (no-damage, minor, major, destroyed).
-When using a config file, trains on train_events and tests/validates on test_events.
-Saves best and latest checkpoints based on test accuracy.
 """
 import argparse, os, random, csv
 import torch, torchvision as tv
@@ -16,7 +13,6 @@ from datasets import ThreeChannelDataset
 import yaml
 
 def load_config(config_path):
-    """Load YAML config file"""
     with open(config_path) as f:
         config = yaml.safe_load(f)
     return {
@@ -37,7 +33,7 @@ def main(args):
     if args.config:
         events = load_config(args.config)
         train_events = events['train_events']
-        test_events = events['test_events']  # Use test_events for validation during training
+        test_events = events['test_events'] 
         print(f"Training on events: {train_events}")
         print(f"Testing/validating on events: {test_events}")
 
@@ -56,41 +52,36 @@ def main(args):
         allowed_events=test_events
     )
     
-    # Calculate class weights for imbalanced dataset
-    class_counts = [0] * 4  # 4 damage classes
+    #  class weights for imbalanced classes
+    class_counts = [0] * 4  
     for _, label in train_ds:
         class_counts[label] += 1
-    
     total_samples = sum(class_counts)
     class_weights = [total_samples / (4 * count) for count in class_counts]
     class_weights = torch.tensor(class_weights, dtype=torch.float32)
     print(f"Class counts: {class_counts}")
-    print(f"Class weights: {class_weights}")
 
 
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
     torch.backends.cudnn.benchmark = True 
-    workers =  4
+    workers =  4 # we have 8 vCPUs
     train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
     test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
 
     print("train_dl.num_workers =", getattr(train_dl, "num_workers", "N/A"))
     print("test_dl.num_workers  =", getattr(test_dl, "num_workers", "N/A"))
+
     ### STEP 3: INIT MODEL ###
- 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
-    if device.type == 'cuda':
-        print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
-    
-    # init ResNet18 or 50 with ImageNet pretrained weights
-    model = tv.models.resnet50(weights=tv.models.ResNet50_Weights.IMAGENET1K_V1)
+
+    # init ResNet18/50 with ImageNet pretrained weights
+    model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
     # Original ImageNet1k has 1000 classes, we only need 4
     # replace fully connected final layer to map 512 features -> 4 classes
     model.fc = nn.Linear(model.fc.in_features, 4)
-    model = model.to(device, memory_format=torch.channels_last)  
+    model = model.to(device)  
 
     # using SGD with momentum for fine-tuning 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
@@ -101,7 +92,7 @@ def main(args):
 
     # Create output dir
     os.makedirs(args.out_dir, exist_ok=True)
-    best = 0.0  # Track best test accuracy
+   
     
     # Initialize CSV metrics file
     metrics_file = os.path.join(args.out_dir, "metrics.csv")
@@ -112,12 +103,14 @@ def main(args):
 
     ### STEP 4: TRAIN MODEL ###
 
+    best = 0.0  # Track best test accuracy
     for epoch in range(args.epochs):
         #TRAINING PHASE
         model.train()  
         tr_loss, tr_seen = 0.0, 0
+
         for xb, yb in train_dl:
-            xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
+            xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to GPU
 
             opt.zero_grad(set_to_none=True)  # Clear gradients from previous iter
             
@@ -128,11 +121,11 @@ def main(args):
             
             # Mixed precision backward pass
             scaler.scale(loss).backward()
-            scaler.step(opt)
-            scaler.update()
+            scaler.step(opt) # gradient step
+            scaler.update() #update gradient
             
             bs = yb.size(0)
-            tr_loss += loss.item() * bs
+            tr_loss += loss.item() * bs 
             tr_seen += bs 
         
         #TESTING PHASE
@@ -141,9 +134,8 @@ def main(args):
         test_loss, test_seen = 0.0, 0
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
-                xb, yb = xb.to(device, non_blocking=True, memory_format=torch.channels_last), yb.to(device, non_blocking=True) # move to device
+                xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
                 
-                # Mixed precision inference
                 with autocast(device_type=device.type):
                     output = model(xb)
                     loss = cost(output, yb)
@@ -160,16 +152,16 @@ def main(args):
         #test accuracy 
         acc = correct / total if total else 0.0
         
-        # average losses for each epoch
+        # avg losses for each epoch
         avg_train_loss = tr_loss / tr_seen
         avg_test_loss = test_loss / test_seen
         
-        # Log metrics to CSV
+        # write metrics to CSV for graphing
         with open(metrics_file, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([epoch + 1, avg_train_loss, avg_test_loss, acc])
         
-        # Save latest checkpoint 
+        # Save checkpoint 
         torch.save(model.state_dict(), os.path.join(args.out_dir, "latest.pt"))
         
         # Save best checkpoint if test accuracy improved
@@ -185,7 +177,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--out_dir", required=True)
-    ap.add_argument("--config", type=str, default=None, help="Path to YAML config file for event filtering (e.g., configs/hurricanes.yaml)")
+    ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering (e.g., configs/hurricanes.yaml)"
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--bs", type=int, default=512)
     ap.add_argument("--lr", type=float, default=0.01)
