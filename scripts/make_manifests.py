@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Build manifest CSV from xView2 label JSON files.
-
-Reads label JSON files containing WKT polygon annotations, extracts bboxes
-for each damage annotation, and creates a CSV manifest with image paths, bbox coordinates,
-and damage labels
+"""Build manifest CSV from label JSONs.
+Reads JSONs with WKT polygons, extracts bboxes for each damage annotation, and makoes a CSV manifest with image paths, bbox coordinates, and damage labels
 """
 import argparse, json, os, csv, math
 from pathlib import Path
@@ -19,7 +16,7 @@ DAMAGE_MAP = {
 }
 
 def clip_bbox(b, w, h, pad=16):
-    """Clip bounding box to image dimensions and add padding."""
+    """Clip bounding box to image dims + padding"""
 
     xmin, ymin, xmax, ymax = b
     # Expand bbox by padding, but not past image boundaries
@@ -34,7 +31,6 @@ def clip_bbox(b, w, h, pad=16):
     return [xmin, ymin, xmax, ymax]
 
 def guess_pre_name(post_name: str):
-    """Convert post-disaster filename to pre-disaster filename."""
     return post_name.replace("_post_disaster", "_pre_disaster")
 
 def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_root: str = None):
@@ -60,10 +56,10 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_ro
         post_img_path = images_root / (label_path.stem + ".png")
 
     if not post_img_path.exists():
-        print(f"[WARNING!!!] Post image not found for {label_path}")
+        print(f"Post image not found for {label_path}")
         return [] 
 
-    # Try to find corresponding pre-disaster image 
+    # find corresponding pre-disaster image 
     pre_img_name = guess_pre_name(post_img_path.name)
     pre_img_path = images_root / pre_img_name
     pre_exists = pre_img_path.exists()  
@@ -71,10 +67,9 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_ro
 
     # Damage annotations from JSON
     feats = j.get("features", {})
-    xy = feats.get("xy", [])  # List of feature annotations
+    xy = feats.get("xy", [])  # gives list of feature annotations
     
     rows = []
-   
     # loop thru damage annotations
     for f in xy:
         props = f.get("properties", {})
@@ -116,11 +111,11 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_ro
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--images_root", required=True, help="Root directory containing image files")
-    ap.add_argument("--labels_root", required=True, help="Root directory containing label JSON files")
-    ap.add_argument("--out_csv", required=True, help="Output CSV manifest path")
-    ap.add_argument("--pad", type=int, default=16, help="Padding pixels to add around bboxes")
-    ap.add_argument("--local_root", type=str, default=None, help="Local root path to replace GCSFuse paths (e.g., /mnt/local_images)")
+    ap.add_argument("--images_root", required=True)
+    ap.add_argument("--labels_root", required=True)
+    ap.add_argument("--out_csv", required=True)
+    ap.add_argument("--pad", type=int, default=16)
+    ap.add_argument("--local_root", type=str, default=None)
     args = ap.parse_args()
 
   
@@ -131,10 +126,10 @@ def main():
    
     out_csv.parent.mkdir(parents=True, exist_ok=True)
 
-    # Find all label JSON files recursively
+    # Find all label JSONs
     label_files = list(labels_root.rglob("*.json"))
     
-    # Write CSV manifest
+    # Write actual manifest
     nrows = 0
     with out_csv.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
@@ -142,8 +137,7 @@ def main():
             "label_id","label_name","uid"
         ])
         writer.writeheader()  
-        
-        # Process each label file and write rows to CSV
+    
         for lp in tqdm(label_files, desc="Labels"):
             for row in build_rows_for_label(lp, images_root, args.pad, args.local_root):
                 writer.writerow(row)

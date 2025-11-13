@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Sync training outputs from local machine to Google Cloud Storage
-# Uploads everything from ~/project/outputs/ to GCS bucket for backup
+# Sync training outputs from local machine to GCS
 set -euo pipefail
 
 OUT_LOCAL="${HOME}/project/outputs"

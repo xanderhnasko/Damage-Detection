@@ -4,7 +4,6 @@ outputs/
 *.ckpt
 .DS_Store
 __pycache__/
-.ipynb_checkpoints/
 .env
-.kaggle/
-fixloss.md
+plot_metrics.py
+

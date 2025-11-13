@@ -1,4 +1,4 @@
-"""PyTorch classes for loading X-channel RGB images with bounding box crops (right now, only 3-channel model)
+""" classes for loading X-channel RGB images with bounding box crops (right now, only 3-channel model)
     Reads a CSV manifest and sets up train/eval splits and applies image transforms"""
 
 import csv
@@ -48,13 +48,14 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
 
         # training transforms
         self.tf_train = tv.transforms.Compose([
-            tv.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),  # Random crop with slight scale variation
-            tv.transforms.RandomHorizontalFlip(p=0.5), # random horizontal flip with explicit probability
-            tv.transforms.RandomRotation(10), # random rotation up to 10 degrees
+            # train time augments
+            tv.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),  
+            tv.transforms.RandomHorizontalFlip(p=0.5),
+            tv.transforms.RandomRotation(10), 
             tv.transforms.ToTensor(),  # convert to PyTorch tensor 
-            tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),  # normalize to ImageNet pretrained stats
+            tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD), 
         ])
-        # eval transform (no augmentation)
+        # test transform (no augmentation)
         self.tf_eval = tv.transforms.Compose([
             tv.transforms.Resize((img_size, img_size)),  
             tv.transforms.ToTensor(),  
