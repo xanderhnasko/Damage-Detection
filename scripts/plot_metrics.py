@@ -6,12 +6,6 @@ import seaborn as sns
 import sys
 
 def plot_training_metrics(csv_path):
-    """
-    Plot training metrics from a CSV file containing epoch, train_loss, test_loss, test_accuracy.
-    """
-    plt.style.use('seaborn-v0_8-whitegrid')
-    sns.set_palette("husl")
-    
     df = pd.read_csv(csv_path)
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))

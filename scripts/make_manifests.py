@@ -56,10 +56,10 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_ro
         post_img_path = images_root / (label_path.stem + ".png")
 
     if not post_img_path.exists():
-        print(f"[WARNING!!!] Post image not found for {label_path}")
+        print(f"Post image not found for {label_path}")
         return [] 
 
-    # Try to find corresponding pre-disaster image 
+    # find corresponding pre-disaster image 
     pre_img_name = guess_pre_name(post_img_path.name)
     pre_img_path = images_root / pre_img_name
     pre_exists = pre_img_path.exists()  
@@ -67,10 +67,9 @@ def build_rows_for_label(label_path: Path, images_root: Path, pad: int, local_ro
 
     # Damage annotations from JSON
     feats = j.get("features", {})
-    xy = feats.get("xy", [])  # List of feature annotations
+    xy = feats.get("xy", [])  # gives list of feature annotations
     
     rows = []
-   
     # loop thru damage annotations
     for f in xy:
         props = f.get("properties", {})

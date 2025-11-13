@@ -1,4 +1,4 @@
-"""PyTorch classes for loading X-channel RGB images with bounding box crops (right now, only 3-channel model)
+""" classes for loading X-channel RGB images with bounding box crops (right now, only 3-channel model)
     Reads a CSV manifest and sets up train/eval splits and applies image transforms"""
 
 import csv
