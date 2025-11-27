@@ -4,7 +4,7 @@ Train ResNet18/50 classifier on crops.
 Reads  manifest CSV with image paths and bboxes, trains a ResNet model
 to classify building damage into 4 categories (no-damage, minor, major, destroyed).
 """
-import argparse, os, random, csv
+import argparse, os, random, csv, time
 import torch, torchvision as tv
 from torch import nn
 from torch.utils.data import DataLoader
@@ -53,11 +53,14 @@ def main(args):
     )
     
     #  class weights for imbalanced classes
-    class_counts = [0] * 4  
-    for _, label in train_ds:
-        class_counts[label] += 1
+    class_counts = [0] * 4
+    for row in getattr(train_ds, "rows", []):
+        class_counts[int(row["label_id"])] += 1
     total_samples = sum(class_counts)
-    class_weights = [total_samples / (4 * count) for count in class_counts]
+    class_weights = [
+        (total_samples / (4 * count)) if count > 0 else 0.0
+        for count in class_counts
+    ]
     class_weights = torch.tensor(class_weights, dtype=torch.float32)
     print(f"Class counts: {class_counts}")
 
@@ -65,9 +68,10 @@ def main(args):
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
     torch.backends.cudnn.benchmark = True 
-    workers =  4 # we have 8 vCPUs
-    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
-    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=4)
+    workers = min(8, os.cpu_count() or 8)
+    prefetch = 6
+    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=prefetch)
+    test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=prefetch)
 
     print("train_dl.num_workers =", getattr(train_dl, "num_workers", "N/A"))
     print("test_dl.num_workers  =", getattr(test_dl, "num_workers", "N/A"))
@@ -108,8 +112,13 @@ def main(args):
         #TRAINING PHASE
         model.train()  
         tr_loss, tr_seen = 0.0, 0
+        data_time = 0.0
+        batch_time = 0.0
+        end = time.perf_counter()
 
         for xb, yb in train_dl:
+            data_time += time.perf_counter() - end
+            batch_start = time.perf_counter()
             xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to GPU
 
             opt.zero_grad(set_to_none=True)  # Clear gradients from previous iter
@@ -127,6 +136,8 @@ def main(args):
             bs = yb.size(0)
             tr_loss += loss.item() * bs 
             tr_seen += bs 
+            batch_time += time.perf_counter() - batch_start
+            end = time.perf_counter()
         
         #TESTING PHASE
         model.eval() 
@@ -169,7 +180,14 @@ def main(args):
             best = acc
             torch.save(model.state_dict(), os.path.join(args.out_dir, "best.pt"))
         
-        print(f"epoch: {epoch+1}/{args.epochs} train loss = {avg_train_loss:.4f} test loss = {avg_test_loss:.4f} test acc. = {acc:.3f}")
+        num_batches = max(1, len(train_dl))
+        print(
+            f"epoch: {epoch+1}/{args.epochs} "
+            f"train loss = {avg_train_loss:.4f} "
+            f"test loss = {avg_test_loss:.4f} "
+            f"test acc. = {acc:.3f} "
+            f"[data_time/batch: {data_time/num_batches:.3f}s, batch_time: {batch_time/num_batches:.3f}s]"
+        )
 
     print(f"best test acc. = {best:.3f}")
 
@@ -179,7 +197,7 @@ if __name__ == "__main__":
     ap.add_argument("--out_dir", required=True)
     ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering (e.g., configs/hurricanes.yaml)"
     ap.add_argument("--epochs", type=int, default=10)
-    ap.add_argument("--bs", type=int, default=512)
+    ap.add_argument("--bs", type=int, default=256)
     ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--img_size", type=int, default=224)
     args = ap.parse_args()
