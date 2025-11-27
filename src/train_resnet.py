@@ -226,7 +226,7 @@ if __name__ == "__main__":
     ap.add_argument("--out_dir", required=True)
     ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering (e.g., configs/hurricanes.yaml)"
     ap.add_argument("--epochs", type=int, default=10)
-    ap.add_argument("--bs", type=int, default=256)
+    ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--img_size", type=int, default=224)
     args = ap.parse_args()
