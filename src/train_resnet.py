@@ -6,10 +6,12 @@ to classify building damage into 4 categories (no-damage, minor, major, destroye
 """
 import argparse, os, random, csv, time
 import torch, torchvision as tv
+import torchvision.transforms.v2 as tvv2
 from torch import nn
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
-from datasets import ThreeChannelDataset
+from torchvision.transforms import InterpolationMode
+from datasets import ThreeChannelDataset, IMAGENET_MEAN, IMAGENET_STD
 import yaml
 
 def load_config(config_path):
@@ -85,6 +87,22 @@ def main(args):
     print("train_dl.num_workers =", getattr(train_dl, "num_workers", "N/A"))
     print("test_dl.num_workers  =", getattr(test_dl, "num_workers", "N/A"))
 
+    # GPU-side augmentation pipelines
+    tf_train_gpu = tvv2.Compose([
+        tvv2.RandomResizedCrop(
+            (args.img_size, args.img_size),
+            scale=(0.6, 1.0),
+            antialias=True,
+        ),
+        tvv2.RandomHorizontalFlip(p=0.5),
+        tvv2.RandomRotation(10, interpolation=InterpolationMode.BILINEAR, fill=0),
+        tvv2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ])
+    tf_eval_gpu = tvv2.Compose([
+        tvv2.Resize((args.img_size, args.img_size), antialias=True),
+        tvv2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ])
+
     ### STEP 3: INIT MODEL ###
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
@@ -129,6 +147,7 @@ def main(args):
             data_time += time.perf_counter() - end
             batch_start = time.perf_counter()
             xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to GPU
+            xb = tf_train_gpu(xb)
 
             opt.zero_grad(set_to_none=True)  # Clear gradients from previous iter
             
@@ -155,6 +174,7 @@ def main(args):
         with torch.no_grad():  # not updating gradients here
             for xb, yb in test_dl:
                 xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
+                xb = tf_eval_gpu(xb)
                 
                 with autocast(device_type=device.type):
                     output = model(xb)

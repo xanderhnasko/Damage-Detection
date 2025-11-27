@@ -73,21 +73,8 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
                 im = self._load_image(path)
                 self._cache_image(path, im)
 
-        # training transforms
-        self.tf_train = tv.transforms.Compose([
-            # train time augments
-            tv.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),  
-            tv.transforms.RandomHorizontalFlip(p=0.5),
-            tv.transforms.RandomRotation(10), 
-            tv.transforms.ToTensor(),  # convert to PyTorch tensor 
-            tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD), 
-        ])
-        # test transform (no augmentation)
-        self.tf_eval = tv.transforms.Compose([
-            tv.transforms.Resize((img_size, img_size)),  
-            tv.transforms.ToTensor(),  
-            tv.transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD), 
-        ])
+        # Minimal CPU transform; augmentations are applied on GPU in the train loop
+        self.to_tensor = tv.transforms.ToTensor()
 
     def __len__(self):
         return len(self.rows)
@@ -115,12 +102,7 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         im = self._get_cached_image(r["img_path"])
         xmin,ymin,xmax,ymax = map(int, [r["xmin"],r["ymin"],r["xmax"],r["ymax"]])
         crop = im.crop((xmin,ymin,xmax,ymax))
-        
-        # Apply transforms based on split
-        if self.split == "train":
-            crop = self.tf_train(crop)
-        else:
-            crop = self.tf_eval(crop)
-        
+
+        crop = self.to_tensor(crop)
         y = int(r["label_id"])
         return crop, y
