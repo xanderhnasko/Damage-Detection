@@ -73,8 +73,11 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
                 im = self._load_image(path)
                 self._cache_image(path, im)
 
-        # Minimal CPU transform; augmentations are applied on GPU in the train loop
-        self.to_tensor = tv.transforms.ToTensor()
+        # Minimal CPU transform; ensure fixed size for collation, aug happens on GPU
+        self.cpu_tf = tv.transforms.Compose([
+            tv.transforms.Resize((img_size, img_size)),
+            tv.transforms.ToTensor(),
+        ])
 
     def __len__(self):
         return len(self.rows)
@@ -103,6 +106,6 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         xmin,ymin,xmax,ymax = map(int, [r["xmin"],r["ymin"],r["xmax"],r["ymax"]])
         crop = im.crop((xmin,ymin,xmax,ymax))
 
-        crop = self.to_tensor(crop)
+        crop = self.cpu_tf(crop)
         y = int(r["label_id"])
         return crop, y
