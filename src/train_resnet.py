@@ -88,18 +88,13 @@ def main(args):
     print("test_dl.num_workers  =", getattr(test_dl, "num_workers", "N/A"))
 
     # GPU-side augmentation pipelines
+    # Light GPU aug: resize already done on CPU for collation; avoid double resize
     tf_train_gpu = tvv2.Compose([
-        tvv2.RandomResizedCrop(
-            (args.img_size, args.img_size),
-            scale=(0.6, 1.0),
-            antialias=True,
-        ),
         tvv2.RandomHorizontalFlip(p=0.5),
         tvv2.RandomRotation(10, interpolation=InterpolationMode.BILINEAR, fill=0),
         tvv2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ])
     tf_eval_gpu = tvv2.Compose([
-        tvv2.Resize((args.img_size, args.img_size), antialias=True),
         tvv2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ])
 
