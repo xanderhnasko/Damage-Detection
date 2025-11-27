@@ -1,5 +1,5 @@
 torchvision
-pillow
+pillow-simd
 numpy<2  
 tqdm
 pyyaml

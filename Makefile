@@ -20,10 +20,10 @@ manifest:
 	$(PY) scripts/make_manifests.py --images_root $(IMAGES_ROOT) --labels_root $(LABELS_ROOT) --out_csv $(MANIFEST) --local_root $(LOCAL_IMAGES) --pad 16
 
 train:
-	$(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 10
+	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 10
 
 sync-outputs:
 	bash scripts/output_to_gcs.sh
 
 train-hurricanes:
-	$(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 20 --config configs/hurricanes.yaml
+	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 20 --config configs/hurricanes.yaml
