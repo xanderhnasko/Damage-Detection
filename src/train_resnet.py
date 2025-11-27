@@ -37,19 +37,28 @@ def main(args):
         print(f"Training on events: {train_events}")
         print(f"Testing/validating on events: {test_events}")
 
+    # Dataset options for caching/preload
+    ds_kwargs = dict(
+        img_size=args.img_size,
+        cache_size=1024,     # generous cache
+        cache_all=True,      # hold all decoded images when possible
+        preload=False,       # set True if RAM permits loading all images up front
+        sort_by_img=True,    # group by source image to maximize cache hits
+    )
+
     # Create train/test datasets from manifest CSV
     # When config is provided, uses event-based filtering (no 90/10 split)
     train_ds = ThreeChannelDataset(
         args.manifest, 
         split="train", 
-        img_size=args.img_size,
-        allowed_events=train_events
+        allowed_events=train_events,
+        **ds_kwargs,
     )
     test_ds = ThreeChannelDataset(
         args.manifest, 
         split="test",  
-        img_size=args.img_size,
-        allowed_events=test_events
+        allowed_events=test_events,
+        **ds_kwargs,
     )
     
     #  class weights for imbalanced classes
