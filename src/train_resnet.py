@@ -41,7 +41,7 @@ def main(args):
     ds_kwargs = dict(
         img_size=args.img_size,
         cache_size=1024,     # generous cache
-        cache_all=True,      # hold all decoded images when possible
+        cache_all=False,      # hold all decoded images when possible
         preload=False,       # set True if RAM permits loading all images up front
         sort_by_img=True,    # group by source image to maximize cache hits
     )
