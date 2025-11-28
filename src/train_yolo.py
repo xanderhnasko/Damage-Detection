@@ -17,6 +17,7 @@ def main():
     ap.add_argument("--device", default="", help="CUDA device string, e.g., 0 or 0,1")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--lr0", type=float, default=0.01, help="Initial learning rate")
+    ap.add_argument("--patience", type=int, default=10, help="Early stop after N epochs without val mAP improvement")
     ap.add_argument("--project", default="~/project/outputs/yolo", help="Output project dir")
     ap.add_argument("--name", default="auto", help="Run name (auto => timestamped)")
     ap.add_argument("--exist_ok", action="store_true", help="Allow overwrite of existing run dir")
@@ -42,6 +43,7 @@ def main():
         name=name,
         exist_ok=args.exist_ok,
         lr0=args.lr0,
+        patience=args.patience,
     )
 
 
