@@ -101,7 +101,7 @@ def main(args):
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
     torch.backends.cudnn.benchmark = True 
-    workers = min(8, os.cpu_count() or 8)
+    workers = min(6, os.cpu_count() or 6)
     prefetch = 6
     train_sampler = GroupedByImageSampler(train_ds)
     train_dl = DataLoader(
@@ -141,10 +141,7 @@ def main(args):
     # replace fully connected final layer to map 512 features -> 4 classes
     model.fc = nn.Linear(model.fc.in_features, 4)
     model = model.to(device)  
-    try:
-        model = torch.compile(model)  # PyTorch 2.x: optimize compute; disable if unsupported
-    except Exception as e:
-        print(f"torch.compile skipped: {e}")
+    # Disable torch.compile for now to reduce potential peak memory; re-enable if stable
 
     # using SGD with momentum for fine-tuning 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
