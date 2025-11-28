@@ -23,7 +23,7 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         split_frac=0.9,
         img_size=224,
         allowed_events=None,
-        cache_size=384,
+        cache_size=512,
         cache_all=False,
         preload=False,
         sort_by_img=True,
