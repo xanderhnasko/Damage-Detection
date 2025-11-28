@@ -8,7 +8,7 @@ import argparse, os, random, csv, time
 import torch, torchvision as tv
 import torchvision.transforms.v2 as tvv2
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Sampler
 from torch.amp import autocast, GradScaler
 from torchvision.transforms import InterpolationMode
 from datasets import ThreeChannelDataset, IMAGENET_MEAN, IMAGENET_STD
@@ -22,6 +22,28 @@ def load_config(config_path):
         'val_events': config.get('val_events', []),
         'test_events': config.get('test_events', [])
     }
+
+class GroupedByImageSampler(Sampler):
+    """Yields indices grouped by img_path to maximize cache hits; shuffles group order each epoch."""
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.groups = {}
+        for idx, row in enumerate(getattr(dataset, "rows", [])):
+            self.groups.setdefault(row["img_path"], []).append(idx)
+
+    def __iter__(self):
+        # Shuffle group order each epoch; optionally shuffle within groups
+        group_keys = list(self.groups.keys())
+        random.shuffle(group_keys)
+        for k in group_keys:
+            grp = self.groups[k]
+            random.shuffle(grp)
+            for idx in grp:
+                yield idx
+
+    def __len__(self):
+        return len(self.dataset)
+
 
 def main(args):
 
@@ -79,9 +101,20 @@ def main(args):
     ### STEP 2: DATA LOADERS ###
     # Transforms applied in dataset.py
     torch.backends.cudnn.benchmark = True 
-    workers = min(10, os.cpu_count() or 10)
-    prefetch = 8
-    train_dl = DataLoader(train_ds, batch_size=args.bs, shuffle=True,  drop_last=True, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=prefetch)
+    workers = min(8, os.cpu_count() or 8)
+    prefetch = 6
+    train_sampler = GroupedByImageSampler(train_ds)
+    train_dl = DataLoader(
+        train_ds,
+        batch_size=args.bs,
+        shuffle=False,
+        sampler=train_sampler,
+        drop_last=True,
+        num_workers=workers,
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=prefetch,
+    )
     test_dl  = DataLoader(test_ds,  batch_size=args.bs, shuffle=False, drop_last=False, num_workers=workers, pin_memory=True, persistent_workers=True, prefetch_factor=prefetch)
 
     print("train_dl.num_workers =", getattr(train_dl, "num_workers", "N/A"))
