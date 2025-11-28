@@ -1,0 +1,6 @@
+path: data/yolo_buildings
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: building
