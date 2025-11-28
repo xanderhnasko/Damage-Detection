@@ -5,3 +5,4 @@ tqdm
 pyyaml
 matplotlib
 pandas
+ultralytics
