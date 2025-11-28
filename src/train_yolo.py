@@ -27,12 +27,15 @@ def main():
     if name == "auto":
         name = datetime.now().strftime("yolo_%Y%m%d_%H%M%S")
 
+    # Ultralytics requires batch as int/float; treat "auto" as 0
+    batch = 0 if args.batch == "auto" else args.batch
+
     model = YOLO(args.model)
     model.train(
         data=args.data,
         epochs=args.epochs,
         imgsz=args.imgsz,
-        batch=args.batch,
+        batch=batch,
         device=args.device,
         workers=args.workers,
         project=project,
