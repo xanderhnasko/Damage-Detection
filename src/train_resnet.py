@@ -91,7 +91,7 @@ def main(args):
     # Light GPU aug: resize already done on CPU for collation; avoid double resize
     tf_train_gpu = tvv2.Compose([
         tvv2.RandomHorizontalFlip(p=0.5),
-        tvv2.RandomRotation(10, interpolation=InterpolationMode.BILINEAR, fill=0),
+        tvv2.RandomRotation(5, interpolation=InterpolationMode.BILINEAR, fill=0),
         tvv2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ])
     tf_eval_gpu = tvv2.Compose([
@@ -108,6 +108,10 @@ def main(args):
     # replace fully connected final layer to map 512 features -> 4 classes
     model.fc = nn.Linear(model.fc.in_features, 4)
     model = model.to(device)  
+    try:
+        model = torch.compile(model)  # PyTorch 2.x: optimize compute; disable if unsupported
+    except Exception as e:
+        print(f"torch.compile skipped: {e}")
 
     # using SGD with momentum for fine-tuning 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
