@@ -24,9 +24,6 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         img_size=224,
         allowed_events=None,
         cache_size=256,
-        cache_all=False,
-        preload=False,
-        sort_by_img=True,
     ):
         rows = []
         # Read all rows from the manifest CSV 
@@ -51,27 +48,14 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
             split_idx = int(len(rows)*split_frac)
             self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
         
-        # Optional stable ordering by image to improve cache hit rate
-        if sort_by_img:
-            self.rows.sort(key=lambda r: r["img_path"])
-
-        # Unique image list (used for cache sizing/preload)
-        self.unique_img_paths = list(OrderedDict.fromkeys(r["img_path"] for r in self.rows))
+        # Stable ordering by image to improve cache hit rate
+        self.rows.sort(key=lambda r: r["img_path"])
 
         self.split = split
         self.img_size = img_size
         # Cache for storing recently loaded images 
         self.cache = OrderedDict()
-        if cache_all:
-            self.cache_max = len(self.unique_img_paths) if self.unique_img_paths else cache_size
-        else:
-            self.cache_max = cache_size
-
-        # Optionally preload all images into memory once
-        if preload and self.unique_img_paths:
-            for path in self.unique_img_paths:
-                im = self._load_image(path)
-                self._cache_image(path, im)
+        self.cache_max = cache_size
 
         # Minimal CPU transform; ensure fixed size for collation, aug happens on GPU
         self.cpu_tf = tv.transforms.Compose([

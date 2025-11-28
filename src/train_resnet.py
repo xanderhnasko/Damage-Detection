@@ -24,7 +24,7 @@ def load_config(config_path):
     }
 
 class GroupedByImageSampler(Sampler):
-    """Yields indices grouped by img_path to maximize cache hits; shuffles group order each epoch."""
+    """ indices grouped by source image"""
     def __init__(self, dataset):
         self.dataset = dataset
         self.groups = {}
@@ -32,7 +32,7 @@ class GroupedByImageSampler(Sampler):
             self.groups.setdefault(row["img_path"], []).append(idx)
 
     def __iter__(self):
-        # Shuffle group order each epoch; optionally shuffle within groups
+        # shuffle group order each epoch
         group_keys = list(self.groups.keys())
         random.shuffle(group_keys)
         for k in group_keys:
@@ -61,28 +61,21 @@ def main(args):
         print(f"Training on events: {train_events}")
         print(f"Testing/validating on events: {test_events}")
 
-    # Dataset options for caching/preload
-    ds_kwargs = dict(
-        img_size=args.img_size,
-        cache_size=256,     
-        cache_all=False,      # hold all decoded images 
-        preload=False,       
-        sort_by_img=True,    # group by source image to maximize cache hits
-    )
-
     # Create train/test datasets from manifest CSV
     # When config is provided, uses event-based filtering (no 90/10 split)
     train_ds = ThreeChannelDataset(
         args.manifest, 
         split="train", 
         allowed_events=train_events,
-        **ds_kwargs,
+        img_size=args.img_size,
+        cache_size=256,
     )
     test_ds = ThreeChannelDataset(
         args.manifest, 
         split="test",  
         allowed_events=test_events,
-        **ds_kwargs,
+        img_size=args.img_size,
+        cache_size=256,
     )
     
     #  class weights for imbalanced classes
@@ -253,7 +246,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--out_dir", required=True)
-    ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering (e.g., configs/hurricanes.yaml)"
+    ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.01)
