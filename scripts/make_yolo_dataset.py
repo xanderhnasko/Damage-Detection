@@ -163,8 +163,6 @@ def main():
             continue
 
         xy = j.get("features", {}).get("xy", [])
-        if not xy:
-            continue
 
         label_lines = []
         for feat in xy:
@@ -178,9 +176,6 @@ def main():
                 continue
             xc, yc, w, h = bbox_to_yolo(bb, width, height)
             label_lines.append(f"0 {xc:.6f} {yc:.6f} {w:.6f} {h:.6f}")
-
-        if not label_lines:
-            continue
 
         # Write/append label file (merge if multiple JSONs map to same image)
         label_out = out_dir / "labels" / split / (img_path.stem + ".txt")
