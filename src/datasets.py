@@ -44,9 +44,13 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
             # When using event-based filtering, use all rows (no further splitting)
             self.rows = rows
         else:
-            # Only apply 90-10 split when not using event-based filtering
-            split_idx = int(len(rows)*split_frac)
-            self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
+            if split is None:
+                # Use all rows (external split already applied)
+                self.rows = rows
+            else:
+                # Only apply 90-10 split when not using event-based filtering
+                split_idx = int(len(rows)*split_frac)
+                self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
         
         # Stable ordering by image to improve cache hit rate
         self.rows.sort(key=lambda r: r["img_path"])

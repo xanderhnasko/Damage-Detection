@@ -51,32 +51,24 @@ def main(args):
 
     # fixed seeds for now
     torch.manual_seed(0); random.seed(0)
-    # event filtering if available
-    train_events = None
-    test_events = None
-    if args.config:
-        events = load_config(args.config)
-        train_events = events['train_events']
-        test_events = events['test_events'] 
-        print(f"Training on events: {train_events}")
-        print(f"Testing/validating on events: {test_events}")
 
-    # Create train/test datasets from manifest CSV
-    # When config is provided, uses event-based filtering (no 90/10 split)
+    if not args.train_manifest or not args.val_manifest:
+        raise ValueError("train_manifest and val_manifest must be provided (detector-generated manifests).")
+
     train_ds = ThreeChannelDataset(
-        args.manifest, 
-        split="train", 
-        allowed_events=train_events,
+        args.train_manifest,
+        split=None,
         img_size=args.img_size,
         cache_size=256,
     )
+    test_manifest = args.test_manifest or args.val_manifest
     test_ds = ThreeChannelDataset(
-        args.manifest, 
-        split="test",  
-        allowed_events=test_events,
+        test_manifest,
+        split=None,
         img_size=args.img_size,
         cache_size=256,
     )
+    print(f"Using manifests: train={args.train_manifest}, val/test={test_manifest}")
     
     #  class weights for imbalanced classes
     class_counts = [0] * 4
@@ -244,9 +236,10 @@ def main(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", required=True)
     ap.add_argument("--out_dir", required=True)
-    ap.add_argument("--config", type=str, default=None) # Path to config file for event filtering
+    ap.add_argument("--train_manifest", type=str, required=True, help="Train manifest (detector outputs)")
+    ap.add_argument("--val_manifest", type=str, required=True, help="Val manifest (detector outputs)")
+    ap.add_argument("--test_manifest", type=str, default=None, help="Optional test manifest (detector outputs); defaults to val_manifest")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.01)

@@ -6,11 +6,15 @@ LOCAL_IMAGES=/mnt/disks/localssd/local_images
 MANIFEST=$(HOME)/project/data/train/train/manifest.csv
 OUTDIR=$(HOME)/project/outputs/$(shell date +%F_%H%M%S)
 YOLO_DATA=$(CURDIR)/data/yolo_buildings
-YOLO_DET_CSV=$(HOME)/project/outputs/yolo/detections.csv
 YOLO_CONFIG?=configs/hurricanes.yaml
 YOLO_SPLIT?=test
-YOLO_DET_OUT?=$(YOLO_DET_CSV)
-YOLO_MANIFEST?=$(MANIFEST)
+YOLO_DET_OUT?=$(HOME)/project/outputs/yolo/detect_$(YOLO_SPLIT).csv
+YOLO_BUCKET?=gs://229_project_bucket/outputs
+
+RESNET_TRAIN_MANIFEST?=$(HOME)/project/outputs/yolo/detect_train.csv
+RESNET_VAL_MANIFEST?=$(HOME)/project/outputs/yolo/detect_val.csv
+RESNET_TEST_MANIFEST?=$(HOME)/project/outputs/yolo/detect_test.csv
+RESNET_OUTDIR?=$(OUTDIR)
 
 setup:
 	pip install -r requirements.txt || true
@@ -25,15 +29,6 @@ copy-images:
 manifest:
 	$(PY) scripts/make_manifests.py --images_root $(IMAGES_ROOT) --labels_root $(LABELS_ROOT) --out_csv $(MANIFEST) --local_root $(LOCAL_IMAGES) --pad 16
 
-train:
-	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 10
-
-sync-outputs:
-	bash scripts/output_to_gcs.sh
-
-train-hurricanes:
-	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --manifest $(MANIFEST) --out_dir $(OUTDIR) --epochs 20 --config configs/hurricanes.yaml
-
 yolo-data:
 	$(PY) scripts/make_yolo_dataset.py --images_root $(LOCAL_IMAGES) --labels_root $(LABELS_ROOT) --out_dir $(YOLO_DATA) --config $(YOLO_CONFIG) --pad 8
 
@@ -42,4 +37,10 @@ yolo-train:
 
 yolo-detect:
 	@if [ -z "$(WEIGHTS)" ]; then echo "Set WEIGHTS=/path/to/yolo/weights.pt"; exit 1; fi
-	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split $(YOLO_SPLIT) --out_csv $(YOLO_DET_OUT) --manifest_gt $(YOLO_MANIFEST)
+	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split $(YOLO_SPLIT) --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST)
+
+resnet:
+	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR)
+
+sync-outputs:
+	gsutil -m cp -r $(HOME)/project/outputs $(YOLO_BUCKET)/

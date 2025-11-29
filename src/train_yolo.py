@@ -19,14 +19,11 @@ def main():
     ap.add_argument("--lr0", type=float, default=0.01, help="Initial learning rate")
     ap.add_argument("--patience", type=int, default=10, help="Early stop after N epochs without val mAP improvement")
     ap.add_argument("--project", default="~/project/outputs/yolo", help="Output project dir")
-    ap.add_argument("--name", default="auto", help="Run name (auto => timestamped)")
     ap.add_argument("--exist_ok", action="store_true", help="Allow overwrite of existing run dir")
     args = ap.parse_args()
 
     project = str(Path(args.project).expanduser())
-    name = args.name
-    if name == "auto":
-        name = datetime.now().strftime("yolo_%Y%m%d_%H%M%S")
+    name = datetime.now().strftime("yolo_%Y%m%d_%H%M%S")
 
     # Ultralytics requires batch as int/float; treat "auto" as 0
     batch = 0 if args.batch == "auto" else args.batch
