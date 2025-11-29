@@ -240,7 +240,7 @@ if __name__ == "__main__":
     ap.add_argument("--train_manifest", type=str, required=True, help="Train manifest (detector outputs)")
     ap.add_argument("--val_manifest", type=str, required=True, help="Val manifest (detector outputs)")
     ap.add_argument("--test_manifest", type=str, default=None, help="Optional test manifest (detector outputs); defaults to val_manifest")
-    ap.add_argument("--epochs", type=int, default=10)
+    ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--img_size", type=int, default=224)
