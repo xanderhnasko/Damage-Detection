@@ -116,6 +116,10 @@ def main():
 
         meta = j.get("metadata", {})
         img_name = meta.get("img_name") or (lp.stem + ".png")
+        # Use post-disaster images only; skip any pre-disaster entries
+        if "_pre_disaster" in img_name:
+            skipped += 1
+            continue
         width = int(meta.get("width", meta.get("original_width", 0)))
         height = int(meta.get("height", meta.get("original_height", 0)))
         if width <= 0 or height <= 0:
