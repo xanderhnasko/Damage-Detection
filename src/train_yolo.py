@@ -10,7 +10,7 @@ from ultralytics import YOLO
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="configs/yolo_building.yaml", help="YOLO data yaml")
-    ap.add_argument("--model", default="yolov8n.pt", help="Base YOLO model checkpoint")
+    ap.add_argument("--model", default="yolov8s.pt", help="Base YOLO model checkpoint")
     ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--batch", default=4)
