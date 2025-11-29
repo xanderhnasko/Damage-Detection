@@ -103,7 +103,8 @@ def main():
     n_val = int(n_labels * args.val_frac) if not any(event_splits.values()) else 0
     n_test = int(n_labels * args.test_frac) if not any(event_splits.values()) else 0
 
-    counts = defaultdict(int)
+    counts = defaultdict(int)  # unique image files per split
+    seen_images = defaultdict(set)
     skipped = 0
 
     for idx, lp in enumerate(tqdm(label_files, desc="Labels")):
@@ -181,15 +182,20 @@ def main():
         if not label_lines:
             continue
 
-        # Write label file
+        # Write/append label file (merge if multiple JSONs map to same image)
         label_out = out_dir / "labels" / split / (img_path.stem + ".txt")
+        if label_out.exists():
+            existing = label_out.read_text().splitlines()
+            label_lines = existing + label_lines
         label_out.write_text("\n".join(label_lines))
 
         # Link/copy image
         img_out = out_dir / "images" / split / img_path.name
         ensure_link(img_path.resolve(), img_out, copy=args.copy_images)
 
-        counts[split] += 1
+        if img_out.name not in seen_images[split]:
+            counts[split] += 1
+            seen_images[split].add(img_out.name)
 
     print(f"[OK] YOLO dataset written to {out_dir}")
     print(f"Counts (by image JSON): {dict(counts)}, skipped: {skipped}")
