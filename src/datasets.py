@@ -24,6 +24,7 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
         img_size=224,
         allowed_events=None,
         cache_size=256,
+        background_label=None,
     ):
         rows = []
         # Read all rows from the manifest CSV 
@@ -51,15 +52,32 @@ class ThreeChannelDataset(torch.utils.data.Dataset):
                 # Only apply 90-10 split when not using event-based filtering
                 split_idx = int(len(rows)*split_frac)
                 self.rows = rows[:split_idx] if split=="train" else rows[split_idx:]
-        
+
+        # Normalize labels and optionally map unmatched (-1) to a background class
+        processed_rows = []
+        for r in self.rows:
+            r = dict(r)
+            lid = int(r["label_id"])
+            if lid < 0:
+                if background_label is None:
+                    continue  # drop negatives when background class not requested
+                lid = background_label
+            r["label_id"] = lid
+            processed_rows.append(r)
+
         # Stable ordering by image to improve cache hit rate
-        self.rows.sort(key=lambda r: r["img_path"])
+        processed_rows.sort(key=lambda r: r["img_path"])
+        self.rows = processed_rows
 
         self.split = split
         self.img_size = img_size
         # Cache for storing recently loaded images 
         self.cache = OrderedDict()
         self.cache_max = cache_size
+        self.background_label = background_label
+
+        max_label = max((int(r["label_id"]) for r in self.rows), default=-1)
+        self.n_classes = max_label + 1 if self.rows else 0
 
         # Minimal CPU transform; ensure fixed size for collation, aug happens on GPU
         self.cpu_tf = tv.transforms.Compose([

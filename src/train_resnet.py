@@ -2,7 +2,8 @@
 """
 Train ResNet18/50 classifier on crops.
 Reads  manifest CSV with image paths and bboxes, trains a ResNet model
-to classify building damage into 4 categories (no-damage, minor, major, destroyed).
+to classify building damage into 4 categories (no-damage, minor, major, destroyed),
+optionally with a background class when unmatched detections are kept.
 """
 import argparse, os, random, csv, time
 import torch, torchvision as tv
@@ -55,11 +56,13 @@ def main(args):
     if not args.train_manifest or not args.val_manifest:
         raise ValueError("train_manifest and val_manifest must be provided (detector-generated manifests).")
 
+    background_label = None if args.background_label is not None and args.background_label < 0 else args.background_label
     train_ds = ThreeChannelDataset(
         args.train_manifest,
         split=None,
         img_size=args.img_size,
         cache_size=256,
+        background_label=background_label,
     )
     test_manifest = args.test_manifest or args.val_manifest
     test_ds = ThreeChannelDataset(
@@ -67,16 +70,23 @@ def main(args):
         split=None,
         img_size=args.img_size,
         cache_size=256,
+        background_label=background_label,
     )
     print(f"Using manifests: train={args.train_manifest}, val/test={test_manifest}")
     
+    # Determine number of classes (handles optional background)
+    num_classes = max(train_ds.n_classes, test_ds.n_classes)
+    if num_classes == 0:
+        raise ValueError("No samples found in datasets after filtering labels.")
+    print(f"Detected {num_classes} classes (including background={background_label})")
+
     #  class weights for imbalanced classes
-    class_counts = [0] * 4
+    class_counts = [0] * num_classes
     for row in getattr(train_ds, "rows", []):
         class_counts[int(row["label_id"])] += 1
     total_samples = sum(class_counts)
     class_weights = [
-        (total_samples / (4 * count)) if count > 0 else 0.0
+        (total_samples / (num_classes * count)) if count > 0 else 0.0
         for count in class_counts
     ]
     class_weights = torch.tensor(class_weights, dtype=torch.float32)
@@ -122,9 +132,8 @@ def main(args):
 
     # init ResNet18/50 with ImageNet pretrained weights
     model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
-    # Original ImageNet1k has 1000 classes, we only need 4
-    # replace fully connected final layer to map 512 features -> 4 classes
-    model.fc = nn.Linear(model.fc.in_features, 4)
+    # Original ImageNet1k has 1000 classes, we only need num_classes (optionally incl. background)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
     model = model.to(device)  
     # Disable torch.compile for now to reduce potential peak memory; re-enable if stable
 
@@ -244,5 +253,6 @@ if __name__ == "__main__":
     ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--img_size", type=int, default=224)
+    ap.add_argument("--background_label", type=int, default=4, help="Map unmatched detector boxes (<0) to this class id; set to -1 to drop them")
     args = ap.parse_args()
     main(args)
