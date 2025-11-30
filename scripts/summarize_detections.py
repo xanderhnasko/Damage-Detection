@@ -34,20 +34,30 @@ def main():
     det_rows = [r for r in det_rows if r["conf"] >= args.conf_min]
     det_total = len(det_rows)
     tp_rows = [r for r in det_rows if r["label_id"] >= 0 and r["match_iou"] >= args.min_iou]
-    matched = len(tp_rows)
-    unmatched = det_total - matched
+
+    # Deduplicate matches so each GT counts once
+    matched_keys = set()
+    for r in tp_rows:
+        if r.get("uid"):
+            key = r["uid"]
+        else:
+            key = (Path(r["img_path"]).name, r["xmin"], r["ymin"], r["xmax"], r["ymax"])
+        matched_keys.add(key)
+
+    matched_unique = len(matched_keys)
+    unmatched = det_total - matched_unique
 
     # total GT boxes for images present in detections
     det_imgs = {Path(r["img_path"]).name for r in det_rows}
     gt_rows = load_manifest(args.manifest)
     gt_total = sum(1 for r in gt_rows if Path(r["img_path"]).name in det_imgs)
 
-    precision = matched / det_total if det_total else 0.0
-    recall = matched / gt_total if gt_total else 0.0
+    precision = matched_unique / det_total if det_total else 0.0
+    recall = matched_unique / gt_total if gt_total else 0.0
 
     print(f"Detections: {det_total}")
-    print(f"Matched (TP): {matched}")
-    print(f"Unmatched (FP): {unmatched}")
+    print(f"Matched (TP, unique GT): {matched_unique}")
+    print(f"Unmatched (FP incl. dup hits): {unmatched}")
     print(f"GT boxes in evaluated images: {gt_total}")
     print(f"Precision: {precision:.3f}")
     print(f"Recall: {recall:.3f}")
