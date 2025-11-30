@@ -330,7 +330,7 @@ if __name__ == "__main__":
     ap.add_argument("--test_manifest", type=str, default=None, help="Optional test manifest for final eval only (detector outputs)")
     ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--bs", type=int, default=320)
-    ap.add_argument("--lr", type=float, default=0.005)
+    ap.add_argument("--lr", type=float, default=0.003)
     ap.add_argument("--img_size", type=int, default=224)
     ap.add_argument("--patience", type=int, default=10, help="Early stop after N epochs without val loss improvement (0 disables)")
     ap.add_argument("--background_label", type=int, default=4, help="Map unmatched detector boxes (<0) to this class id; set to -1 to drop them")

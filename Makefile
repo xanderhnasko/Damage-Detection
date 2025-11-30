@@ -16,6 +16,10 @@ RESNET_TRAIN_MANIFEST?=$(DETECT_DIR)detect_train.csv
 RESNET_VAL_MANIFEST?=$(DETECT_DIR)detect_val.csv
 RESNET_TEST_MANIFEST?=$(DETECT_DIR)detect_test.csv
 RESNET_OUTDIR?=$(OUTDIR)
+BACKGROUND_LABEL?=4
+ifneq ($(DROP_BG),)
+BACKGROUND_LABEL:=-1
+endif
 
 setup:
 	pip install -r requirements.txt || true
@@ -49,7 +53,7 @@ yolo-summary:
 	$(PY) scripts/summarize_detections.py --det_csv $(DET_CSV) --manifest $(MANIFEST)
 
 resnet:
-	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR) --background_label 4
+	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR) --background_label $(BACKGROUND_LABEL)
 
 sync-outputs:
 	gsutil -m cp -r $(HOME)/project/outputs $(YOLO_BUCKET)/
