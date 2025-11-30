@@ -1,6 +1,6 @@
-train_events: ["hurricane-harvey","hurricane-michael",
-               "midwest-flooding","santa-rosa-wildfire",
-               "guatemala-volcano","palu-tsunami","socal-fire"]
-val_events:   ["hurricane-matthew", "mexico-earthquake"]
-test_events:  ["hurricane-florence"]
+train_events: ["hurricane-harvey","hurricane-michael", "mexico-earthquake",
+              "palu-tsunami","socal-fire", "midwest-flooding"]
+              
+val_events:   ["hurricane-matthew", "guatemala-volcano"]
+test_events:  ["hurricane-florence", "santa-rosa-wildfire"]
 

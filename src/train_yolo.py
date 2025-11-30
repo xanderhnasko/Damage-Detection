@@ -12,7 +12,7 @@ def main():
     ap.add_argument("--data", default="configs/yolo_building.yaml", help="YOLO data yaml")
     ap.add_argument("--model", default="yolov8m.pt", help="Base YOLO model checkpoint")
     ap.add_argument("--epochs", type=int, default=50)
-    ap.add_argument("--imgsz", type=int, default=768)
+    ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--batch", default=4)
     ap.add_argument("--device", default="", help="CUDA device string, e.g., 0 or 0,1")
     ap.add_argument("--workers", type=int, default=8)

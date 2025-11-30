@@ -47,7 +47,7 @@ def main():
     ap.add_argument("--out_csv", required=True, help="Where to write detection manifest")
     ap.add_argument("--manifest_gt", type=str, default=None, help="Optional GT manifest (for label lookup)")
     ap.add_argument("--match_iou", type=float, default=0.3, help="IoU threshold to assign GT label")
-    ap.add_argument("--imgsz", type=int, default=768)
+    ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--conf", type=float, default=0.05)
     ap.add_argument("--nms_iou", type=float, default=0.45)
     ap.add_argument("--device", default="")
