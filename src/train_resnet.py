@@ -50,6 +50,9 @@ def main(args):
 
     # fixed seeds for now
     torch.manual_seed(0); random.seed(0)
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
 
     if not args.train_manifest or not args.val_manifest:
         raise ValueError("train_manifest and val_manifest must be provided (detector-generated manifests).")
@@ -148,7 +151,14 @@ def main(args):
     model = tv.models.resnet18(weights=tv.models.ResNet18_Weights.IMAGENET1K_V1)
     # Original ImageNet1k has 1000 classes, we only need num_classes (optionally incl. background)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
-    model = model.to(device)  
+    model = model.to(device)
+    model = model.to(memory_format=torch.channels_last)
+    if hasattr(torch, "compile"):
+        try:
+            model = torch.compile(model, mode="reduce-overhead")
+            print("Using torch.compile (mode=reduce-overhead)")
+        except Exception as e:
+            print(f"[WARN] torch.compile disabled: {e}")
     # Disable torch.compile for now to reduce potential peak memory; re-enable if stable
 
     # using SGD with momentum for fine-tuning 
@@ -195,7 +205,8 @@ def main(args):
         for xb, yb in train_dl:
             data_time += time.perf_counter() - end
             batch_start = time.perf_counter()
-            xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to GPU
+            xb = xb.to(device, non_blocking=True, memory_format=torch.channels_last)
+            yb = yb.to(device, non_blocking=True) # move to GPU
             xb = tf_train_gpu(xb)
 
             opt.zero_grad(set_to_none=True)  # Clear gradients from previous iter
@@ -222,7 +233,8 @@ def main(args):
         val_loss, val_seen = 0.0, 0
         with torch.no_grad():  # not updating gradients here
             for xb, yb in val_dl:
-                xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True) # move to device
+                xb = xb.to(device, non_blocking=True, memory_format=torch.channels_last)
+                yb = yb.to(device, non_blocking=True) # move to device
                 xb = tf_eval_gpu(xb)
                 
                 with autocast(device_type=device.type):
@@ -299,7 +311,8 @@ def main(args):
         test_loss, test_seen = 0.0, 0
         with torch.no_grad():
             for xb, yb in test_dl:
-                xb, yb = xb.to(device, non_blocking=True), yb.to(device, non_blocking=True)
+                xb = xb.to(device, non_blocking=True, memory_format=torch.channels_last)
+                yb = yb.to(device, non_blocking=True)
                 xb = tf_eval_gpu(xb)
                 with autocast(device_type=device.type):
                     output = model(xb)
