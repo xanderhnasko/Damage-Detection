@@ -154,7 +154,7 @@ def main(args):
     # using SGD with momentum for fine-tuning 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        opt, mode="min", factor=0.5, patience=3, verbose=False, min_lr=1e-5
+        opt, mode="min", factor=0.5, patience=3, min_lr=1e-5
     )
     cost = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=0.05).to(device)
     
