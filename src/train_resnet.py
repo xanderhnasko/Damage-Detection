@@ -153,13 +153,6 @@ def main(args):
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     model = model.to(device)
     model = model.to(memory_format=torch.channels_last)
-    if hasattr(torch, "compile"):
-        try:
-            model = torch.compile(model, mode="reduce-overhead")
-            print("Using torch.compile (mode=reduce-overhead)")
-        except Exception as e:
-            print(f"[WARN] torch.compile disabled: {e}")
-    # Disable torch.compile for now to reduce potential peak memory; re-enable if stable
 
     # using SGD with momentum for fine-tuning 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
@@ -336,7 +329,7 @@ if __name__ == "__main__":
     ap.add_argument("--val_manifest", type=str, required=True, help="Val manifest (detector outputs)")
     ap.add_argument("--test_manifest", type=str, default=None, help="Optional test manifest for final eval only (detector outputs)")
     ap.add_argument("--epochs", type=int, default=50)
-    ap.add_argument("--bs", type=int, default=512)
+    ap.add_argument("--bs", type=int, default=320)
     ap.add_argument("--lr", type=float, default=0.005)
     ap.add_argument("--img_size", type=int, default=224)
     ap.add_argument("--patience", type=int, default=10, help="Early stop after N epochs without val loss improvement (0 disables)")
