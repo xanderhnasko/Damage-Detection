@@ -11,9 +11,10 @@ YOLO_SPLIT?=test
 YOLO_DET_OUT?=$(if $(WEIGHTS),$(dir $(WEIGHTS))detect_$(YOLO_SPLIT).csv,$(HOME)/project/outputs/yolo/detect_$(YOLO_SPLIT).csv)
 YOLO_BUCKET?=gs://229_project_bucket/outputs
 
-RESNET_TRAIN_MANIFEST?=$(HOME)/project/outputs/yolo/detect_train.csv
-RESNET_VAL_MANIFEST?=$(HOME)/project/outputs/yolo/detect_val.csv
-RESNET_TEST_MANIFEST?=$(HOME)/project/outputs/yolo/detect_test.csv
+DETECT_DIR?=$(if $(WEIGHTS),$(dir $(WEIGHTS)),$(HOME)/project/outputs/yolo/)
+RESNET_TRAIN_MANIFEST?=$(DETECT_DIR)detect_train.csv
+RESNET_VAL_MANIFEST?=$(DETECT_DIR)detect_val.csv
+RESNET_TEST_MANIFEST?=$(DETECT_DIR)detect_test.csv
 RESNET_OUTDIR?=$(OUTDIR)
 
 setup:
