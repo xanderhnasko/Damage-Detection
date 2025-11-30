@@ -37,18 +37,18 @@ yolo-train:
 
 yolo-detect:
 	@if [ -z "$(WEIGHTS)" ]; then echo "Set WEIGHTS=/path/to/yolo/weights.pt"; exit 1; fi
-	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split $(YOLO_SPLIT) --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST)
+	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split $(YOLO_SPLIT) --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST) --keep_unmatched
 
 yolo-detect-test:
 	@if [ -z "$(WEIGHTS)" ]; then echo "Set WEIGHTS=/path/to/yolo/weights.pt"; exit 1; fi
-	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split test --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST)
+	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split test --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST) --keep_unmatched
 
 yolo-summary:
 	@if [ -z "$(DET_CSV)" ]; then echo "Set DET_CSV=/path/to/detect.csv (e.g., from yolo-detect-test)"; exit 1; fi
 	$(PY) scripts/summarize_detections.py --det_csv $(DET_CSV) --manifest $(MANIFEST)
 
 resnet:
-	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR)
+	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR) --background_label 4
 
 sync-outputs:
 	gsutil -m cp -r $(HOME)/project/outputs $(YOLO_BUCKET)/
