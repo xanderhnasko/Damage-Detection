@@ -18,8 +18,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--det_csv", required=True, help="Detection CSV from yolo_detect.py")
     ap.add_argument("--manifest", required=True, help="GT manifest (for recall calc)")
-    ap.add_argument("--conf_min", type=float, default=0.0, help="Min confidence to keep detections")
-    ap.add_argument("--min_iou", type=float, default=0.0, help="Min match_iou to count as TP")
+    ap.add_argument("--conf_min", type=float, default=0.1, help="Min confidence to keep detections")
+    ap.add_argument("--min_iou", type=float, default=0.1, help="Min match_iou to count as TP")
     args = ap.parse_args()
 
     det_rows = []
