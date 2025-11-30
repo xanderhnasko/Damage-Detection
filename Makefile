@@ -39,6 +39,10 @@ yolo-detect:
 	@if [ -z "$(WEIGHTS)" ]; then echo "Set WEIGHTS=/path/to/yolo/weights.pt"; exit 1; fi
 	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split $(YOLO_SPLIT) --out_csv $(YOLO_DET_OUT) --manifest_gt $(MANIFEST)
 
+yolo-detect-test:
+	@if [ -z "$(WEIGHTS)" ]; then echo "Set WEIGHTS=/path/to/yolo/weights.pt"; exit 1; fi
+	$(PY) src/yolo_detect.py --weights $(WEIGHTS) --data_root $(YOLO_DATA) --split test --out_csv $(HOME)/project/outputs/yolo/detect_test.csv --manifest_gt $(MANIFEST)
+
 resnet:
 	TORCHVISION_USE_LIBJPEG_TURBO=1 $(PY) src/train_resnet.py --train_manifest $(RESNET_TRAIN_MANIFEST) --val_manifest $(RESNET_VAL_MANIFEST) --test_manifest $(RESNET_TEST_MANIFEST) --out_dir $(RESNET_OUTDIR)
 

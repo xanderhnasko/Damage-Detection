@@ -48,9 +48,9 @@ def main():
     ap.add_argument("--manifest_gt", type=str, default=None, help="Optional GT manifest (for label lookup)")
     ap.add_argument("--match_iou", type=float, default=0.3, help="IoU threshold to assign GT label")
     ap.add_argument("--imgsz", type=int, default=768)
-    ap.add_argument("--conf", type=float, default=0.15)
+    ap.add_argument("--conf", type=float, default=0.1)
     ap.add_argument("--nms_iou", type=float, default=0.45)
-    ap.add_argument("--device", default="", help="CUDA device string, e.g., 0 or 0,1")
+    ap.add_argument("--device", default="", help="CUDA device string, e
     ap.add_argument("--max_det", type=int, default=300)
     ap.add_argument("--keep_unmatched", action="store_true", help="Include detections without GT match")
     args = ap.parse_args()
