@@ -15,6 +15,14 @@ from torchvision.transforms import InterpolationMode
 from datasets import ThreeChannelDataset, IMAGENET_MEAN, IMAGENET_STD
 import yaml
 
+def gpu_mem_fmt(device: torch.device) -> str:
+    if device.type != "cuda":
+        return ""
+    alloc = torch.cuda.memory_allocated(device) / (1024 ** 3)
+    reserved = torch.cuda.memory_reserved(device) / (1024 ** 3)
+    peak = torch.cuda.max_memory_allocated(device) / (1024 ** 3)
+    return f"alloc={alloc:.2f}G reserved={reserved:.2f}G peak={peak:.2f}G"
+
 def load_config(config_path):
     with open(config_path) as f:
         config = yaml.safe_load(f)
@@ -159,6 +167,10 @@ def main(args):
 
     best = 0.0  # Track best test accuracy
     for epoch in range(args.epochs):
+        epoch_start = time.perf_counter()
+        if device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(device)
+
         #TRAINING PHASE
         model.train()  
         tr_loss, tr_seen = 0.0, 0
@@ -233,12 +245,15 @@ def main(args):
             torch.save(model.state_dict(), os.path.join(args.out_dir, "best.pt"))
         
         num_batches = max(1, len(train_dl))
+        epoch_time = time.perf_counter() - epoch_start
+        mem_info = gpu_mem_fmt(device)
         print(
             f"epoch: {epoch+1}/{args.epochs} "
             f"train loss = {avg_train_loss:.4f} "
             f"test loss = {avg_test_loss:.4f} "
             f"test acc. = {acc:.3f} "
-            f"[data_time/batch: {data_time/num_batches:.3f}s, batch_time: {batch_time/num_batches:.3f}s]"
+            f"[epoch_time: {epoch_time:.1f}s, data_time/batch: {data_time/num_batches:.3f}s, batch_time: {batch_time/num_batches:.3f}s"
+            f"{', ' + mem_info if mem_info else ''}]"
         )
 
     print(f"best test acc. = {best:.3f}")
